@@ -9,6 +9,11 @@ import {
   deleteReplacedMedia,
   TEAM_MEDIA_FIELDS,
 } from '../../utils/mediaCleanup.js';
+import {
+  mapRowMediaUrls,
+  mapRowsMediaUrls,
+  normalizeRowMediaInputs,
+} from '../../utils/mediaUrls.js';
 import { teamSchema } from '../shared/schemas.js';
 
 const router = Router();
@@ -21,7 +26,7 @@ router.get(
       .select('*')
       .order('sort_order', { ascending: true });
     if (error) throw new AppError(error.message, 500);
-    res.json(ok(data));
+    res.json(ok(mapRowsMediaUrls(data ?? [], TEAM_MEDIA_FIELDS)));
   }),
 );
 
@@ -30,13 +35,17 @@ router.post(
   requireAuth,
   validateBody(teamSchema),
   asyncHandler(async (req, res) => {
+    const body = normalizeRowMediaInputs(
+      { ...req.body, updated_at: new Date().toISOString() },
+      TEAM_MEDIA_FIELDS,
+    );
     const { data, error } = await getSupabase()
       .from('team_members')
-      .insert({ ...req.body, updated_at: new Date().toISOString() })
+      .insert(body)
       .select('*')
       .single();
     if (error) throw new AppError(error.message, 500);
-    res.status(201).json(ok(data, 'Team member created'));
+    res.status(201).json(ok(mapRowMediaUrls(data, TEAM_MEDIA_FIELDS), 'Team member created'));
   }),
 );
 
@@ -54,7 +63,10 @@ router.put(
     if (findError) throw new AppError(findError.message, 500);
     if (!existing) throw new AppError('Team member not found', 404);
 
-    const body = { ...req.body, updated_at: new Date().toISOString() };
+    const body = normalizeRowMediaInputs(
+      { ...req.body, updated_at: new Date().toISOString() },
+      TEAM_MEDIA_FIELDS,
+    );
     const { data, error } = await supabase
       .from('team_members')
       .update(body)
@@ -64,7 +76,7 @@ router.put(
     if (error) throw new AppError(error.message, 500);
 
     await deleteReplacedMedia(existing, body, TEAM_MEDIA_FIELDS);
-    res.json(ok(data, 'Team member updated'));
+    res.json(ok(mapRowMediaUrls(data, TEAM_MEDIA_FIELDS), 'Team member updated'));
   }),
 );
 

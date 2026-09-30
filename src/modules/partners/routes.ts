@@ -9,6 +9,11 @@ import {
   deleteReplacedMedia,
   PARTNER_MEDIA_FIELDS,
 } from '../../utils/mediaCleanup.js';
+import {
+  mapRowMediaUrls,
+  mapRowsMediaUrls,
+  normalizeRowMediaInputs,
+} from '../../utils/mediaUrls.js';
 import { partnerSchema } from '../shared/schemas.js';
 
 const router = Router();
@@ -21,7 +26,7 @@ router.get(
       .select('*')
       .order('sort_order', { ascending: true });
     if (error) throw new AppError(error.message, 500);
-    res.json(ok(data));
+    res.json(ok(mapRowsMediaUrls(data ?? [], PARTNER_MEDIA_FIELDS)));
   }),
 );
 
@@ -30,9 +35,10 @@ router.post(
   requireAuth,
   validateBody(partnerSchema),
   asyncHandler(async (req, res) => {
-    const { data, error } = await getSupabase().from('partners').insert(req.body).select('*').single();
+    const body = normalizeRowMediaInputs({ ...req.body }, PARTNER_MEDIA_FIELDS);
+    const { data, error } = await getSupabase().from('partners').insert(body).select('*').single();
     if (error) throw new AppError(error.message, 500);
-    res.status(201).json(ok(data, 'Partner created'));
+    res.status(201).json(ok(mapRowMediaUrls(data, PARTNER_MEDIA_FIELDS), 'Partner created'));
   }),
 );
 
@@ -50,16 +56,17 @@ router.put(
     if (findError) throw new AppError(findError.message, 500);
     if (!existing) throw new AppError('Partner not found', 404);
 
+    const body = normalizeRowMediaInputs({ ...req.body }, PARTNER_MEDIA_FIELDS);
     const { data, error } = await supabase
       .from('partners')
-      .update(req.body)
+      .update(body)
       .eq('id', req.params.id)
       .select('*')
       .single();
     if (error) throw new AppError(error.message, 500);
 
-    await deleteReplacedMedia(existing, req.body, PARTNER_MEDIA_FIELDS);
-    res.json(ok(data, 'Partner updated'));
+    await deleteReplacedMedia(existing, body, PARTNER_MEDIA_FIELDS);
+    res.json(ok(mapRowMediaUrls(data, PARTNER_MEDIA_FIELDS), 'Partner updated'));
   }),
 );
 

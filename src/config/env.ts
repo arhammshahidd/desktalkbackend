@@ -7,16 +7,18 @@ const envSchema = z.object({
   PORT: z.string().default('4000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
+  PUBLIC_API_URL: z.string().url().optional(),
   SUPABASE_URL: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   JWT_SECRET: z.string().min(8),
   JWT_EXPIRES_IN: z.string().default('7d'),
   B2_KEY_ID: z.string().min(1),
   B2_APPLICATION_KEY: z.string().min(1),
-  B2_BUCKET: z.string().min(1),
+  B2_BUCKET: z.string().min(1).optional(),
+  B2_BUCKET_NAME: z.string().min(1).optional(),
   B2_REGION: z.string().default('us-west-004'),
   B2_ENDPOINT: z.string().url(),
-  B2_PUBLIC_URL: z.string().url(),
+  B2_PUBLIC_URL: z.string().optional(),
   ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_PASSWORD: z.string().optional(),
   ADMIN_NAME: z.string().optional(),
@@ -43,9 +45,20 @@ const frontendUrls = frontendUrlRaw
   .map((u) => u.trim())
   .filter(Boolean);
 
+const bucket =
+  process.env.B2_BUCKET ||
+  process.env.B2_BUCKET_NAME ||
+  '';
+
+const publicApiUrl =
+  process.env.PUBLIC_API_URL ||
+  (isProd ? 'https://desktalkbackend.vercel.app' : `http://localhost:${process.env.PORT || 4000}`);
+
 export const env = {
   port: Number(process.env.PORT || 4000),
   nodeEnv: process.env.NODE_ENV || 'development',
+  /** Absolute API origin (no trailing /api) — used to build /api/media proxy URLs. */
+  publicApiUrl,
   /** Primary frontend origin (first entry if comma-separated). */
   frontendUrl: frontendUrls[0] || 'http://localhost:5173',
   /** All allowed frontend origins (comma-separated FRONTEND_URL). */
@@ -57,9 +70,10 @@ export const env = {
   b2: {
     keyId: process.env.B2_KEY_ID || '',
     applicationKey: process.env.B2_APPLICATION_KEY || '',
-    bucket: process.env.B2_BUCKET || '',
+    bucket,
     region: process.env.B2_REGION || 'us-west-004',
     endpoint: process.env.B2_ENDPOINT || '',
+    /** Optional legacy public base; private buckets leave this empty. */
     publicUrl: process.env.B2_PUBLIC_URL || '',
   },
   admin: {

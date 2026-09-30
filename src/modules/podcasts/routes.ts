@@ -9,6 +9,11 @@ import {
   deleteReplacedMedia,
   PODCAST_MEDIA_FIELDS,
 } from '../../utils/mediaCleanup.js';
+import {
+  mapRowMediaUrls,
+  mapRowsMediaUrls,
+  normalizeRowMediaInputs,
+} from '../../utils/mediaUrls.js';
 import { podcastSchema } from '../shared/schemas.js';
 
 const router = Router();
@@ -23,7 +28,7 @@ router.get(
       .order('sort_order', { ascending: true })
       .order('published_at', { ascending: false });
     if (error) throw new AppError(error.message, 500);
-    res.json(ok(data));
+    res.json(ok(mapRowsMediaUrls(data ?? [], PODCAST_MEDIA_FIELDS)));
   }),
 );
 
@@ -37,7 +42,7 @@ router.get(
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: false });
     if (error) throw new AppError(error.message, 500);
-    res.json(ok(data));
+    res.json(ok(mapRowsMediaUrls(data ?? [], PODCAST_MEDIA_FIELDS)));
   }),
 );
 
@@ -52,7 +57,7 @@ router.get(
       .maybeSingle();
     if (error) throw new AppError(error.message, 500);
     if (!data) throw new AppError('Podcast not found', 404);
-    res.json(ok(data));
+    res.json(ok(mapRowMediaUrls(data, PODCAST_MEDIA_FIELDS)));
   }),
 );
 
@@ -61,7 +66,7 @@ router.post(
   requireAuth,
   validateBody(podcastSchema),
   asyncHandler(async (req, res) => {
-    const body = req.body;
+    const body = normalizeRowMediaInputs({ ...req.body }, PODCAST_MEDIA_FIELDS);
     const slug = body.slug || slugify(body.title);
     const payload = {
       ...body,
@@ -71,7 +76,7 @@ router.post(
     };
     const { data, error } = await getSupabase().from('podcasts').insert(payload).select('*').single();
     if (error) throw new AppError(error.message, 500);
-    res.status(201).json(ok(data, 'Podcast created'));
+    res.status(201).json(ok(mapRowMediaUrls(data, PODCAST_MEDIA_FIELDS), 'Podcast created'));
   }),
 );
 
@@ -89,7 +94,10 @@ router.put(
     if (findError) throw new AppError(findError.message, 500);
     if (!existing) throw new AppError('Podcast not found', 404);
 
-    const body = { ...req.body, updated_at: new Date().toISOString() };
+    const body = normalizeRowMediaInputs(
+      { ...req.body, updated_at: new Date().toISOString() },
+      PODCAST_MEDIA_FIELDS,
+    );
     if (body.title && !body.slug) body.slug = slugify(body.title);
     if (body.published === true) body.published_at = new Date().toISOString();
 
@@ -102,7 +110,7 @@ router.put(
     if (error) throw new AppError(error.message, 500);
 
     await deleteReplacedMedia(existing, body, PODCAST_MEDIA_FIELDS);
-    res.json(ok(data, 'Podcast updated'));
+    res.json(ok(mapRowMediaUrls(data, PODCAST_MEDIA_FIELDS), 'Podcast updated'));
   }),
 );
 

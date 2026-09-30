@@ -95,11 +95,12 @@ export const presignSchema = z.object({
 
 export const confirmUploadSchema = z.object({
   key: z.string().min(1),
-  publicUrl: z.string().url(),
+  publicUrl: z.string().optional().default(''),
   contentType: z.string().optional().default(''),
   folder: z.string().optional().default('uploads'),
 });
 
 export const deleteByUrlSchema = z.object({
-  url: z.string().min(1),
-});
+  url: z.string().optional(),
+  key: z.string().optional(),
+}).refine((v) => Boolean(v.url || v.key), { message: 'url or key is required' });

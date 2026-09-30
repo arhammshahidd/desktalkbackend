@@ -9,6 +9,11 @@ import {
   deleteMediaFromRow,
   deleteReplacedMedia,
 } from '../../utils/mediaCleanup.js';
+import {
+  mapRowMediaUrls,
+  mapRowsMediaUrls,
+  normalizeRowMediaInputs,
+} from '../../utils/mediaUrls.js';
 import { blogSchema } from '../shared/schemas.js';
 
 const router = Router();
@@ -22,7 +27,7 @@ router.get(
       .eq('published', true)
       .order('published_at', { ascending: false });
     if (error) throw new AppError(error.message, 500);
-    res.json(ok(data));
+    res.json(ok(mapRowsMediaUrls(data ?? [], BLOG_MEDIA_FIELDS)));
   }),
 );
 
@@ -35,7 +40,7 @@ router.get(
       .select('*, category:categories(*)')
       .order('created_at', { ascending: false });
     if (error) throw new AppError(error.message, 500);
-    res.json(ok(data));
+    res.json(ok(mapRowsMediaUrls(data ?? [], BLOG_MEDIA_FIELDS)));
   }),
 );
 
@@ -50,7 +55,7 @@ router.get(
       .maybeSingle();
     if (error) throw new AppError(error.message, 500);
     if (!data) throw new AppError('Blog not found', 404);
-    res.json(ok(data));
+    res.json(ok(mapRowMediaUrls(data, BLOG_MEDIA_FIELDS)));
   }),
 );
 
@@ -59,7 +64,7 @@ router.post(
   requireAuth,
   validateBody(blogSchema),
   asyncHandler(async (req, res) => {
-    const body = req.body;
+    const body = normalizeRowMediaInputs({ ...req.body }, BLOG_MEDIA_FIELDS);
     const payload = {
       ...body,
       slug: body.slug || slugify(body.title),
@@ -68,7 +73,7 @@ router.post(
     };
     const { data, error } = await getSupabase().from('blogs').insert(payload).select('*').single();
     if (error) throw new AppError(error.message, 500);
-    res.status(201).json(ok(data, 'Blog created'));
+    res.status(201).json(ok(mapRowMediaUrls(data, BLOG_MEDIA_FIELDS), 'Blog created'));
   }),
 );
 
@@ -86,7 +91,10 @@ router.put(
     if (findError) throw new AppError(findError.message, 500);
     if (!existing) throw new AppError('Blog not found', 404);
 
-    const body = { ...req.body, updated_at: new Date().toISOString() };
+    const body = normalizeRowMediaInputs(
+      { ...req.body, updated_at: new Date().toISOString() },
+      BLOG_MEDIA_FIELDS,
+    );
     if (body.title && !body.slug) body.slug = slugify(body.title);
     if (body.published === true) body.published_at = new Date().toISOString();
 
@@ -99,7 +107,7 @@ router.put(
     if (error) throw new AppError(error.message, 500);
 
     await deleteReplacedMedia(existing, body, BLOG_MEDIA_FIELDS);
-    res.json(ok(data, 'Blog updated'));
+    res.json(ok(mapRowMediaUrls(data, BLOG_MEDIA_FIELDS), 'Blog updated'));
   }),
 );
 

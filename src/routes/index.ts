@@ -8,6 +8,7 @@ import partnerRoutes from '../modules/partners/routes.js';
 import pageRoutes from '../modules/pages/routes.js';
 import submissionRoutes from '../modules/submissions/routes.js';
 import uploadRoutes from '../modules/uploads/routes.js';
+import mediaRoutes from '../modules/media/routes.js';
 import dashboardRoutes from '../modules/dashboard/routes.js';
 
 const router = Router();
@@ -21,6 +22,7 @@ router.use('/partners', partnerRoutes);
 router.use('/pages', pageRoutes);
 router.use('/submissions', submissionRoutes);
 router.use('/uploads', uploadRoutes);
+router.use('/media', mediaRoutes);
 router.use('/dashboard', dashboardRoutes);
 
 export default router;

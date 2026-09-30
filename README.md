@@ -22,6 +22,7 @@ Set these in Vercel → Project → Settings → Environment Variables:
 |----------|--------|
 | `NODE_ENV` | `production` |
 | `FRONTEND_URL` | `https://desktalkfrontend.arhamq15.workers.dev` (comma-separate more origins if needed) |
+| `PUBLIC_API_URL` | `https://desktalkbackend.vercel.app` (no `/api` — used for `/api/media` proxy URLs) |
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server only) |
 | `JWT_SECRET` | Long random string (required) |

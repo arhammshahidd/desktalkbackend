@@ -1,6 +1,6 @@
 import { deleteB2Object } from '../config/b2.js';
-import { env } from '../config/env.js';
 import { getSupabase } from '../config/supabase.js';
+import { resolveMediaKey } from './mediaUrls.js';
 
 /** Media URL columns on content tables. */
 export const PODCAST_MEDIA_FIELDS = [
@@ -15,34 +15,12 @@ export const BLOG_MEDIA_FIELDS = ['cover_url'] as const;
 export const TEAM_MEDIA_FIELDS = ['photo_url'] as const;
 export const PARTNER_MEDIA_FIELDS = ['logo_url'] as const;
 
-/**
- * Derive a B2 object key from a public URL produced by createPresignedUpload.
- * Supports friendly URLs like https://f000.backblazeb2.com/file/{bucket}/{key}
- * and any URL that starts with B2_PUBLIC_URL.
- */
+/** @deprecated use resolveMediaKey — kept for older call sites */
 export function b2KeyFromPublicUrl(url: string | null | undefined): string | null {
-  if (!url || typeof url !== 'string') return null;
-  const trimmed = url.trim();
-  if (!trimmed || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return null;
-
-  const publicBase = (env.b2.publicUrl || '').replace(/\/$/, '');
-  if (publicBase && trimmed.startsWith(`${publicBase}/`)) {
-    return decodeURIComponent(trimmed.slice(publicBase.length + 1).split('?')[0] || '') || null;
-  }
-
-  const bucket = env.b2.bucket;
-  if (bucket) {
-    const fileMarker = `/file/${bucket}/`;
-    const idx = trimmed.indexOf(fileMarker);
-    if (idx !== -1) {
-      return decodeURIComponent(trimmed.slice(idx + fileMarker.length).split('?')[0] || '') || null;
-    }
-  }
-
-  return null;
+  return resolveMediaKey(url);
 }
 
-function collectUrls(
+function collectValues(
   row: Record<string, unknown> | null | undefined,
   fields: readonly string[],
 ): string[] {
@@ -52,12 +30,12 @@ function collectUrls(
     .filter((value): value is string => typeof value === 'string' && value.length > 0);
 }
 
-/** Delete B2 objects + matching media_assets rows for the given public URLs. */
-export async function deleteMediaUrls(urls: Array<string | null | undefined>) {
+/** Delete B2 objects + matching media_assets rows for keys / proxy URLs / legacy URLs. */
+export async function deleteMediaUrls(values: Array<string | null | undefined>) {
   const keys = [
     ...new Set(
-      urls
-        .map((url) => b2KeyFromPublicUrl(url))
+      values
+        .map((value) => resolveMediaKey(value))
         .filter((key): key is string => Boolean(key)),
     ),
   ];
@@ -80,17 +58,13 @@ export async function deleteMediaUrls(urls: Array<string | null | undefined>) {
   }
 }
 
-/** Delete media referenced by selected columns on a row. */
 export async function deleteMediaFromRow(
   row: Record<string, unknown> | null | undefined,
   fields: readonly string[],
 ) {
-  await deleteMediaUrls(collectUrls(row, fields));
+  await deleteMediaUrls(collectValues(row, fields));
 }
 
-/**
- * After an update, remove B2 files for fields whose URL changed or was cleared.
- */
 export async function deleteReplacedMedia(
   previous: Record<string, unknown> | null | undefined,
   next: Record<string, unknown>,
@@ -104,7 +78,12 @@ export async function deleteReplacedMedia(
     const oldUrl = previous[field];
     const newUrl = next[field];
     if (typeof oldUrl === 'string' && oldUrl && oldUrl !== newUrl) {
-      toDelete.push(oldUrl);
+      const oldKey = resolveMediaKey(oldUrl);
+      const newKey = typeof newUrl === 'string' ? resolveMediaKey(newUrl) : null;
+      // Only delete if the underlying object key actually changed
+      if (oldKey && oldKey !== newKey) {
+        toDelete.push(oldUrl);
+      }
     }
   }
 

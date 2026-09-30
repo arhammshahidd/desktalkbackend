@@ -11,7 +11,12 @@ const app = express();
 // Required on Vercel so express-rate-limit sees the real client IP
 app.set('trust proxy', 1);
 
-app.use(helmet());
+app.use(
+  helmet({
+    // Allow <img>/<video> on the Cloudflare frontend to load /api/media from Vercel
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }),
+);
 
 const allowedOrigins = new Set(
   [
