@@ -4,6 +4,11 @@ import { asyncHandler, AppError } from '../../middleware/errorHandler.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { validateBody } from '../../middleware/validate.js';
 import { ok } from '../../utils/helpers.js';
+import {
+  deleteMediaFromRow,
+  deleteReplacedMedia,
+  PARTNER_MEDIA_FIELDS,
+} from '../../utils/mediaCleanup.js';
 import { partnerSchema } from '../shared/schemas.js';
 
 const router = Router();
@@ -36,13 +41,24 @@ router.put(
   requireAuth,
   validateBody(partnerSchema.partial()),
   asyncHandler(async (req, res) => {
-    const { data, error } = await getSupabase()
+    const supabase = getSupabase();
+    const { data: existing, error: findError } = await supabase
+      .from('partners')
+      .select('*')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (findError) throw new AppError(findError.message, 500);
+    if (!existing) throw new AppError('Partner not found', 404);
+
+    const { data, error } = await supabase
       .from('partners')
       .update(req.body)
       .eq('id', req.params.id)
       .select('*')
       .single();
     if (error) throw new AppError(error.message, 500);
+
+    await deleteReplacedMedia(existing, req.body, PARTNER_MEDIA_FIELDS);
     res.json(ok(data, 'Partner updated'));
   }),
 );
@@ -51,8 +67,17 @@ router.delete(
   '/:id',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { error } = await getSupabase().from('partners').delete().eq('id', req.params.id);
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('partners')
+      .delete()
+      .eq('id', req.params.id)
+      .select('*')
+      .maybeSingle();
     if (error) throw new AppError(error.message, 500);
+    if (!data) throw new AppError('Partner not found', 404);
+
+    await deleteMediaFromRow(data, PARTNER_MEDIA_FIELDS);
     res.json(ok(null, 'Partner deleted'));
   }),
 );

@@ -4,6 +4,11 @@ import { asyncHandler, AppError } from '../../middleware/errorHandler.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { validateBody } from '../../middleware/validate.js';
 import { ok, slugify } from '../../utils/helpers.js';
+import {
+  BLOG_MEDIA_FIELDS,
+  deleteMediaFromRow,
+  deleteReplacedMedia,
+} from '../../utils/mediaCleanup.js';
 import { blogSchema } from '../shared/schemas.js';
 
 const router = Router();
@@ -72,16 +77,28 @@ router.put(
   requireAuth,
   validateBody(blogSchema.partial()),
   asyncHandler(async (req, res) => {
+    const supabase = getSupabase();
+    const { data: existing, error: findError } = await supabase
+      .from('blogs')
+      .select('*')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (findError) throw new AppError(findError.message, 500);
+    if (!existing) throw new AppError('Blog not found', 404);
+
     const body = { ...req.body, updated_at: new Date().toISOString() };
     if (body.title && !body.slug) body.slug = slugify(body.title);
     if (body.published === true) body.published_at = new Date().toISOString();
-    const { data, error } = await getSupabase()
+
+    const { data, error } = await supabase
       .from('blogs')
       .update(body)
       .eq('id', req.params.id)
       .select('*')
       .single();
     if (error) throw new AppError(error.message, 500);
+
+    await deleteReplacedMedia(existing, body, BLOG_MEDIA_FIELDS);
     res.json(ok(data, 'Blog updated'));
   }),
 );
@@ -90,8 +107,17 @@ router.delete(
   '/:id',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { error } = await getSupabase().from('blogs').delete().eq('id', req.params.id);
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('blogs')
+      .delete()
+      .eq('id', req.params.id)
+      .select('*')
+      .maybeSingle();
     if (error) throw new AppError(error.message, 500);
+    if (!data) throw new AppError('Blog not found', 404);
+
+    await deleteMediaFromRow(data, BLOG_MEDIA_FIELDS);
     res.json(ok(null, 'Blog deleted'));
   }),
 );

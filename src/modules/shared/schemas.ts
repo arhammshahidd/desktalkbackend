@@ -99,3 +99,7 @@ export const confirmUploadSchema = z.object({
   contentType: z.string().optional().default(''),
   folder: z.string().optional().default('uploads'),
 });
+
+export const deleteByUrlSchema = z.object({
+  url: z.string().min(1),
+});

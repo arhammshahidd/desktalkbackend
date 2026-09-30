@@ -9,6 +9,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed:admin": "tsx src/scripts/create-admin.ts",
+    "b2:cors": "tsx src/scripts/configure-b2-cors.ts",
     "typecheck": "tsc --noEmit"
   },
   "keywords": ["desktalk", "express", "api"],

@@ -4,6 +4,11 @@ import { asyncHandler, AppError } from '../../middleware/errorHandler.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { validateBody } from '../../middleware/validate.js';
 import { ok, slugify } from '../../utils/helpers.js';
+import {
+  deleteMediaFromRow,
+  deleteReplacedMedia,
+  PODCAST_MEDIA_FIELDS,
+} from '../../utils/mediaCleanup.js';
 import { podcastSchema } from '../shared/schemas.js';
 
 const router = Router();
@@ -75,16 +80,28 @@ router.put(
   requireAuth,
   validateBody(podcastSchema.partial()),
   asyncHandler(async (req, res) => {
+    const supabase = getSupabase();
+    const { data: existing, error: findError } = await supabase
+      .from('podcasts')
+      .select('*')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (findError) throw new AppError(findError.message, 500);
+    if (!existing) throw new AppError('Podcast not found', 404);
+
     const body = { ...req.body, updated_at: new Date().toISOString() };
     if (body.title && !body.slug) body.slug = slugify(body.title);
     if (body.published === true) body.published_at = new Date().toISOString();
-    const { data, error } = await getSupabase()
+
+    const { data, error } = await supabase
       .from('podcasts')
       .update(body)
       .eq('id', req.params.id)
       .select('*')
       .single();
     if (error) throw new AppError(error.message, 500);
+
+    await deleteReplacedMedia(existing, body, PODCAST_MEDIA_FIELDS);
     res.json(ok(data, 'Podcast updated'));
   }),
 );
@@ -93,8 +110,17 @@ router.delete(
   '/:id',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { error } = await getSupabase().from('podcasts').delete().eq('id', req.params.id);
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('podcasts')
+      .delete()
+      .eq('id', req.params.id)
+      .select('*')
+      .maybeSingle();
     if (error) throw new AppError(error.message, 500);
+    if (!data) throw new AppError('Podcast not found', 404);
+
+    await deleteMediaFromRow(data, PODCAST_MEDIA_FIELDS);
     res.json(ok(null, 'Podcast deleted'));
   }),
 );
