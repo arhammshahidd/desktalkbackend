@@ -8,6 +8,18 @@ export const blogBodySchema = z.object({
   cover_url: z.string().optional().default(''),
   category_id: z.string().uuid().nullable().optional(),
   author_name: z.string().optional().default('Desktalk'),
+  author_role: z.string().optional().default(''),
+  author_photo_url: z.string().optional().default(''),
+  author_linkedin: z.string().optional().default(''),
+  faq: z
+    .array(
+      z.object({
+        question: z.string(),
+        answer: z.string(),
+      }),
+    )
+    .optional()
+    .default([]),
   published: z.boolean().optional().default(false),
   published_at: z.string().datetime().nullable().optional(),
 });

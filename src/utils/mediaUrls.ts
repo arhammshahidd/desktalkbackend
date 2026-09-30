@@ -7,6 +7,7 @@ export const IMAGE_MEDIA_FIELDS = new Set([
   'guest_photo_url',
   'sponsor_logo_url',
   'cover_url',
+  'author_photo_url',
   'photo_url',
   'logo_url',
 ]);

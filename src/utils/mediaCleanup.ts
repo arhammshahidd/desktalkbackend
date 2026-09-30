@@ -11,7 +11,7 @@ export const PODCAST_MEDIA_FIELDS = [
   'sponsor_logo_url',
 ] as const;
 
-export const BLOG_MEDIA_FIELDS = ['cover_url'] as const;
+export const BLOG_MEDIA_FIELDS = ['cover_url', 'author_photo_url'] as const;
 export const TEAM_MEDIA_FIELDS = ['photo_url'] as const;
 export const PARTNER_MEDIA_FIELDS = ['logo_url'] as const;
 
