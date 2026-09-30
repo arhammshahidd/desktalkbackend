@@ -8,13 +8,32 @@ import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
 
+// Required on Vercel so express-rate-limit sees the real client IP
+app.set('trust proxy', 1);
+
 app.use(helmet());
+
+const allowedOrigins = new Set(
+  [
+    ...env.frontendUrls,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+  ].filter(Boolean),
+);
+
 app.use(
   cors({
-    origin: [env.frontendUrl, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin(origin, callback) {
+      // Allow non-browser / same-origin requests (no Origin header)
+      if (!origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
   }),
 );
+
 app.use(express.json({ limit: '2mb' }));
 
 app.get('/api/health', (_req, res) => {

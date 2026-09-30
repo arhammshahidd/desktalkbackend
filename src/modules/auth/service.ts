@@ -19,6 +19,10 @@ export async function login(email: string, password: string) {
   const valid = await bcrypt.compare(password, admin.password_hash);
   if (!valid) throw new AppError('Invalid credentials', 401);
 
+  if (!env.jwtSecret) {
+    throw new AppError('JWT_SECRET is not configured', 500);
+  }
+
   const payload: AuthPayload = { sub: admin.id, email: admin.email, name: admin.name };
   const token = jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtExpiresIn } as jwt.SignOptions);
 

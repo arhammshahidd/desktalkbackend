@@ -23,6 +23,7 @@ const envSchema = z.object({
 });
 
 const parsed = envSchema.safeParse(process.env);
+const isProd = (process.env.NODE_ENV || 'development') === 'production';
 
 if (!parsed.success) {
   console.warn(
@@ -31,13 +32,27 @@ if (!parsed.success) {
   );
 }
 
+const jwtSecret = process.env.JWT_SECRET || '';
+if (isProd && (!jwtSecret || jwtSecret === 'dev-secret-change-me')) {
+  console.error('[env] JWT_SECRET must be set to a strong unique value in production.');
+}
+
+const frontendUrlRaw = process.env.FRONTEND_URL || 'http://localhost:5173';
+const frontendUrls = frontendUrlRaw
+  .split(',')
+  .map((u) => u.trim())
+  .filter(Boolean);
+
 export const env = {
   port: Number(process.env.PORT || 4000),
   nodeEnv: process.env.NODE_ENV || 'development',
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  /** Primary frontend origin (first entry if comma-separated). */
+  frontendUrl: frontendUrls[0] || 'http://localhost:5173',
+  /** All allowed frontend origins (comma-separated FRONTEND_URL). */
+  frontendUrls,
   supabaseUrl: process.env.SUPABASE_URL || '',
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-me',
+  jwtSecret: jwtSecret || (isProd ? '' : 'dev-secret-change-me'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   b2: {
     keyId: process.env.B2_KEY_ID || '',
@@ -52,5 +67,5 @@ export const env = {
     password: process.env.ADMIN_PASSWORD || 'ChangeMe123!',
     name: process.env.ADMIN_NAME || 'Desktalk Admin',
   },
-  isDev: (process.env.NODE_ENV || 'development') !== 'production',
+  isDev: !isProd,
 };
