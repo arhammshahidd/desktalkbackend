@@ -10,7 +10,7 @@ insert into categories (name, slug, type) values
 on conflict (slug) do nothing;
 
 insert into page_settings (key, value) values
-  ('home_hero', '{"title":"Where Expert Conversations Become Community","subtitle":"Discover expert insights through podcasts, connect with a global community, and join events that inspire meaningful conversations and lasting connections.","videoTitle":"Why Market Research & UX Research Are Finally Converging."}'::jsonb),
+  ('home_hero', '{"title":"Where Expert Conversations Become Community","subtitle":"Discover expert insights through podcasts, connect with a global community, and join events that inspire meaningful conversations and lasting connections.","videoTitle":"Why Market Research & UX Research Are Finally Converging.","youtubeUrl":"","videoThumbnail":""}'::jsonb),
   ('community', '{"title":"The DeskTalk community is growing!","body":"Join researchers, leaders, and innovators sharing insights that shape the future of tech and business.","cta":"Join our Community"}'::jsonb),
   ('podcasts_hero', '{"title":"Listen to the voices shaping the Future of Tech & leadership."}'::jsonb),
   ('about_hero', '{"title":"Where Tech comes More New Technology Is Disrupting Business","visionTitle":"Our Vision","visionBody":"We bring expert conversations to a global community of leaders and innovators.","whatWeDoTitle":"What We Do","whatWeDoBody":"DeskTalks produces podcasts, blogs, and community events focused on AI, research, and leadership."}'::jsonb),
