@@ -10,6 +10,7 @@ import submissionRoutes from '../modules/submissions/routes.js';
 import uploadRoutes from '../modules/uploads/routes.js';
 import mediaRoutes from '../modules/media/routes.js';
 import dashboardRoutes from '../modules/dashboard/routes.js';
+import analyticsRoutes from '../modules/analytics/routes.js';
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use('/submissions', submissionRoutes);
 router.use('/uploads', uploadRoutes);
 router.use('/media', mediaRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/analytics', analyticsRoutes);
 
 export default router;
