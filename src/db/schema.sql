@@ -136,3 +136,11 @@ create table if not exists media_assets (
 create index if not exists idx_podcasts_published on podcasts (published, sort_order, published_at desc);
 create index if not exists idx_blogs_published on blogs (published, published_at desc);
 create index if not exists idx_categories_type on categories (type);
+
+-- Supabase API roles need explicit grants when tables are created via SQL
+grant usage on schema public to postgres, anon, authenticated, service_role;
+grant all on all tables in schema public to postgres, anon, authenticated, service_role;
+grant all on all sequences in schema public to postgres, anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to postgres, anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to postgres, anon, authenticated, service_role;
+
